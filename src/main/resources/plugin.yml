@@ -8,5 +8,4 @@ commands:
     description: Teleport to player's island
   location:
     description: Get Other player's island spawn
-  roulette:
-    description: open item giveaway roulette (Just a test)
+    
