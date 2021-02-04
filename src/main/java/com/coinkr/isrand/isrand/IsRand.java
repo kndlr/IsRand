@@ -14,6 +14,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -60,6 +61,7 @@ public final class IsRand extends JavaPlugin {
             Material.BLAZE_SPAWN_EGG,
             Material.GHAST_SPAWN_EGG,
             Material.PHANTOM_SPAWN_EGG,
+            Material.PARROT_SPAWN_EGG,
             Material.END_PORTAL_FRAME,
             Material.END_PORTAL,
             Material.NETHER_PORTAL,
@@ -73,6 +75,7 @@ public final class IsRand extends JavaPlugin {
         pm.registerEvents(new PlayerJoin(this), this);
         pm.registerEvents(new InventoryClick(this), this);
         pm.registerEvents(new InventoryOpen(this), this);
+        pm.registerEvents(new BlockBreak(this), this);
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             public void run() {
@@ -121,7 +124,6 @@ public final class IsRand extends JavaPlugin {
 
         this.getCommand("spawn").setExecutor(new CommandEvent(this));
         this.getCommand("location").setExecutor(new CommandEvent(this));
-        this.getCommand("roulette").setExecutor(new CommandEvent(this));
 
         getConfig().options().copyDefaults();
         saveDefaultConfig();
@@ -144,25 +146,33 @@ class PlayerJoin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        //랜덤 위치 생성
-        Random rand = new Random();
-        int posX = rand.nextInt(500) - 1000;
-        int posZ = rand.nextInt(500) - 1000;
+        if (plugin.getConfig().get(player.getUniqueId().toString()) == null) {
 
-        //플레이어의 스폰 위치
-        Location spawn = new Location(plugin.baseworld, posX, 61, posZ);
+            Random rand = new Random();
+            // -100 ~ 100 사이의 난수로 랜덤 위치 생성
+            int posX = rand.nextInt(200) - 100;
+            int posZ = rand.nextInt(200) - 100;
 
-        //베드락 생성, 스폰포인트 설정 후 TP
-        plugin.baseworld.getBlockAt(posX, 60, posZ).setType(Material.ENDER_CHEST);
-        player.setBedSpawnLocation(spawn, true);
-        player.teleport(spawn.add(0.5, 0, 0.5));
+            //플레이어의 스폰 위치
+            Location spawn = new Location(plugin.baseworld, posX, 60, posZ);
 
-        plugin.getConfig().set(player.getUniqueId().toString() + ".x", spawn.getX());
-        plugin.getConfig().set(player.getUniqueId().toString() + ".z", spawn.getZ());
+            //베드락 생성, 스폰포인트 설정 후 TP
+            plugin.baseworld.getBlockAt(posX, 59, posZ).setType(Material.ENDER_CHEST);
+            for (int x = -1; x <= 1; x++)
+                for (int z = -1; z <= 1; z++) {
+                    plugin.baseworld.getBlockAt(posX + x, 58, posZ + z).setType(Material.GRASS_BLOCK);
+                    plugin.baseworld.getBlockAt(posX + x, 57, posZ + z).setType(Material.DIRT);
+                    plugin.baseworld.getBlockAt(posX + x, 56, posZ + z).setType(Material.STONE);
+                }
+            player.setBedSpawnLocation(spawn, true);
+            player.teleport(spawn.add(0.5, 0, 0.5));
 
-        plugin.saveConfig();
+            plugin.getConfig().set(player.getUniqueId().toString() + ".x", spawn.getX());
+            plugin.getConfig().set(player.getUniqueId().toString() + ".z", spawn.getZ());
+
+            plugin.saveConfig();
+        }
     }
-
 }
 
 class CommandEvent implements CommandExecutor {
@@ -183,16 +193,16 @@ class CommandEvent implements CommandExecutor {
                 Player target;
                 if ((args.length != 0) && executor.isOp()) {
                     target = Bukkit.getPlayer(args[0]);
-                    if (target == null || plugin.getConfig().get(target.getUniqueId().toString()) == null) {
-                        executor.sendMessage(ChatColor.RED + args[0] + "님의 섬을 찾을 수 없습니다!");
-                        return false;
-                    }
                 } else {
                     target = executor;
                 }
+                if (target == null || plugin.getConfig().get(target.getUniqueId().toString()) == null) {
+                    executor.sendMessage(ChatColor.RED + args[0] + "님의 섬을 찾을 수 없습니다!");
+                    return false;
+                }
                 int posX = plugin.getConfig().getInt(target.getUniqueId().toString() + ".x");
                 int posZ = plugin.getConfig().getInt(target.getUniqueId().toString() + ".z");
-                Location spawn = new Location(plugin.baseworld, posX, 61, posZ);
+                Location spawn = new Location(plugin.baseworld, posX, 60, posZ);
 
                 executor.teleport(spawn.subtract(0.5, 0, 0.5));
 
@@ -201,12 +211,16 @@ class CommandEvent implements CommandExecutor {
 
             //다른 사람의 스폰 가져오기
             else if (cmd.getName().equalsIgnoreCase("location")) {
-                Player target = Bukkit.getPlayer(args[0]);
-                if (target == null) {
+                Player target;
+                if ((args.length != 0) && executor.isOp()) {
+                    target = Bukkit.getPlayer(args[0]);
+                } else {
+                    target = executor;
+                }
+                if (target == null || plugin.getConfig().get(target.getUniqueId().toString()) == null) {
                     executor.sendMessage(ChatColor.RED + args[0] + "님의 섬을 찾을 수 없습니다!");
                     return false;
                 }
-
                 int posX = plugin.getConfig().getInt(target.getUniqueId().toString() + ".x");
                 int posZ = plugin.getConfig().getInt(target.getUniqueId().toString() + ".z");
 
@@ -245,9 +259,7 @@ class InventoryClick implements Listener {
         if (event.getView().getTitle().equalsIgnoreCase(ChatColor.BLUE + "룰렛")) {
             event.setCancelled(true);
         }
-
     }
-
 }
 
 class InventoryOpen implements Listener {
@@ -268,7 +280,7 @@ class InventoryOpen implements Listener {
                 // 쿨타임이 17.5초 미만이라면 반환
                 Long time = System.currentTimeMillis() - plugin.cooltime.get(executor.getUniqueId().toString());
                 if (time < 17500) {
-                    executor.sendMessage(ChatColor.RED + String.format("%s초 기다려주세요!", Math.round((17500 - time) / 1000.0)));
+                    executor.sendMessage(ChatColor.RED + String.format("%s초 기다려주세요!", Math.round((17500 - time) / 100.0) / 10.0));
                     return;
                 }
             }
@@ -285,6 +297,24 @@ class InventoryOpen implements Listener {
             executor.openInventory(roulette);
 
             executor.playSound(executor.getLocation(), Sound.BLOCK_ANVIL_LAND, 1.0f, 1.0f);
+        }
+    }
+}
+
+class BlockBreak implements Listener {
+    IsRand plugin;
+
+    public BlockBreak(IsRand plugin) {
+        this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        Block block = event.getBlock();
+
+        if (block.getType() == Material.ENDER_CHEST && player.getGameMode() != GameMode.CREATIVE) {
+            event.setCancelled(true);
         }
     }
 }
