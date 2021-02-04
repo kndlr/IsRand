@@ -6,6 +6,7 @@ import org.bukkit.*;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.EnderChest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -149,9 +150,14 @@ class PlayerJoin implements Listener {
         if (plugin.getConfig().get(player.getUniqueId().toString()) == null) {
 
             Random rand = new Random();
-            // -100 ~ 100 사이의 난수로 랜덤 위치 생성
-            int posX = rand.nextInt(200) - 100;
-            int posZ = rand.nextInt(200) - 100;
+            // -250 ~ 250 사이의 난수로 랜덤 위치 생성
+            int posX = rand.nextInt(500) - 250;
+            int posZ = rand.nextInt(500) - 250;
+
+            while (posX <= 100 && posX >= -100 && posZ <= 100 && posZ >= -100) {
+                posX = rand.nextInt(500) - 250;
+                posZ = rand.nextInt(500) - 250;
+            }
 
             //플레이어의 스폰 위치
             Location spawn = new Location(plugin.baseworld, posX, 60, posZ);
