@@ -66,7 +66,11 @@ public final class IsRand extends JavaPlugin {
             Material.END_PORTAL,
             Material.NETHER_PORTAL,
             Material.DRAGON_EGG,
-            Material.CHORUS_FRUIT};
+            Material.CHORUS_FRUIT,
+            Material.BARRIER,
+            Material.ENDER_PEARL,
+            Material.ENDER_EYE,
+            Material.TRIDENT};
 
     public static LocaleManager localeManager;
 
