@@ -3,9 +3,9 @@ version: ${project.version}
 main: com.coinkr.isrand.isrand.IsRand
 authors: ['COIN-KR', 'dacoonkr']
 api-version: 1.16
+depend: [LocaleLib]
 commands:
   spawn:
     description: Teleport to player's island
   location:
     description: Get Other player's island spawn
-    

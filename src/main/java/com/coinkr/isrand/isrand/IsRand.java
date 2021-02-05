@@ -1,26 +1,23 @@
 package com.coinkr.isrand.isrand;
 
+import me.pikamug.localelib.LocaleLib;
+import me.pikamug.localelib.LocaleManager;
 import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.*;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.EnderChest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.Listener;
 
@@ -29,6 +26,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -66,17 +65,33 @@ public final class IsRand extends JavaPlugin {
             Material.END_PORTAL_FRAME,
             Material.END_PORTAL,
             Material.NETHER_PORTAL,
-            Material.DRAGON_EGG};
+            Material.DRAGON_EGG,
+            Material.CHORUS_FRUIT};
+
+    public static LocaleManager localeManager;
 
     @Override
     public void onEnable() {
         getLogger().info("활성화 되었습니다.");
+
+        getConfig().options().copyDefaults();
+        saveDefaultConfig();
+
+        LocaleLib localeLib = (LocaleLib) getServer().getPluginManager().getPlugin("LocaleLib");
+        if (localeLib == null) {
+            getLogger().info("아이템 한글화 작업을 위해 LocaleLib 플러그인이 요구됩니다! /plugins 디렉토리에 해당 플러그인을 넣어주세요.");
+        } else {
+            localeManager = localeLib.getLocaleManager();
+        }
 
         PluginManager pm = Bukkit.getServer().getPluginManager();
         pm.registerEvents(new PlayerJoin(this), this);
         pm.registerEvents(new InventoryClick(this), this);
         pm.registerEvents(new InventoryOpen(this), this);
         pm.registerEvents(new BlockBreak(this), this);
+
+        this.getCommand("spawn").setExecutor(new CommandEvent(this));
+        this.getCommand("location").setExecutor(new CommandEvent(this));
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             public void run() {
@@ -91,15 +106,18 @@ public final class IsRand extends JavaPlugin {
                         roulette_inv.get(i).delay += (0.2 / roulette_inv.get(i).delay);
 
                         if (roulette_inv.get(i).delay >= 4) {
+                            ItemStack reward = roulette_inv.get(i).inv.getItem(4);
                             executor.playSound(executor.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
 
                             if (executor.getInventory().firstEmpty() == -1) {
-                                executor.getWorld().dropItem(executor.getLocation(), roulette_inv.get(i).inv.getItem(4));
+                                executor.getWorld().dropItem(executor.getLocation(), reward);
                             } else {
-                                executor.getInventory().addItem(roulette_inv.get(i).inv.getItem(4));
+                                executor.getInventory().addItem(reward);
                             }
 
-                            executor.sendMessage(ChatColor.GOLD + roulette_inv.get(i).inv.getItem(4).getType().name().toLowerCase() + ChatColor.RESET + " 아이템을 획득했습니다!");
+                            String result = IsRand.localeManager.queryMaterial(reward.getType(), (short) 0, reward.getItemMeta());
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + executor.getName() + " [\"\",{\"translate\" : \"" + result + "\",\"color\":\"gold\",\"bold\":\"true\"},{\"text\":\" (을)를 획득했습니다!\"}]");
+
                             roulette_inv.remove(i);
                             continue;
                         }
@@ -122,12 +140,6 @@ public final class IsRand extends JavaPlugin {
                 }
             }
         }, 1, 1);
-
-        this.getCommand("spawn").setExecutor(new CommandEvent(this));
-        this.getCommand("location").setExecutor(new CommandEvent(this));
-
-        getConfig().options().copyDefaults();
-        saveDefaultConfig();
     }
 
     @Override
@@ -283,10 +295,10 @@ class InventoryOpen implements Listener {
             event.setCancelled(true);
 
             if (plugin.cooltime.containsKey(executor.getUniqueId().toString())) {
-                // 쿨타임이 17.5초 미만이라면 반환
+                // 쿨타임이 15초 미만이라면 반환
                 Long time = System.currentTimeMillis() - plugin.cooltime.get(executor.getUniqueId().toString());
-                if (time < 17500) {
-                    executor.sendMessage(ChatColor.RED + String.format("%s초 기다려주세요!", Math.round((17500 - time) / 100.0) / 10.0));
+                if (time < 15000) {
+                    executor.sendMessage(ChatColor.RED + String.format("%s초 기다려주세요!", Math.round((15000 - time) / 100.0) / 10.0));
                     return;
                 }
             }
